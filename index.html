@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #111114;
+    --bg2:       #18181c;
+    --card:      #1c1c20;
+    --card2:     #222228;
+    --border:    rgba(255,255,255,0.07);
+    --text:      #f0f0f5;
+    --text-sub:  #9ca3af;
+    --text-muted:#5c6370;
+    --blue:      #4f8ef7;
+    --blue-dim:  rgba(79,142,247,0.12);
+    --blue-mid:  rgba(79,142,247,0.25);
+    --green:     #34d399;
+    --green-dim: rgba(52,211,153,0.12);
+    --purple:    #a78bfa;
+    --purple-dim:rgba(167,139,250,0.12);
+    --purple-mid:rgba(167,139,250,0.28);
+    --yellow:    #fbbf24;
+    --yellow-dim:rgba(251,191,36,0.12);
+    --teal:      #2dd4bf;
+    --teal-dim:  rgba(45,212,191,0.12);
+    --teal-mid:  rgba(45,212,191,0.25);
+    --yellow-card:#fbbf24;
+    --yellow-dim:rgba(251,191,36,0.12);
+    --yellow-mid:rgba(251,191,36,0.25);
+    --radius:    20px;
+    --shadow:    0 2px 16px rgba(0,0,0,0.4);
+    --shadow-md: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;-webkit-font-smoothing:antialiased;min-height:100vh;}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(17,17,20,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);height:60px;display:flex;align-items:center;padding:0 clamp(20px,6vw,80px);justify-content:space-between;}
+  .nav-logo{font-size:15px;font-weight:700;letter-spacing:-0.3px;}
+  .nav-logo em{font-style:normal;color:var(--blue);}
+  .nav-links{display:flex;gap:4px;}
+  .nav-links a{font-size:13px;font-weight:500;color:var(--text-muted);text-decoration:none;padding:5px 12px;border-radius:7px;transition:color .18s,background .18s;}
+  .nav-links a:hover{color:var(--text);background:rgba(255,255,255,0.05);}
+  .nav-links a.active{color:var(--blue);}
+
+  /* HERO */
+  .hero{padding:100px clamp(20px,5vw,40px) 72px;max-width:900px;margin:0 auto;opacity:0;animation:fadeUp .6s ease .1s forwards;}
+  .hero-label{display:inline-flex;align-items:center;gap:7px;background:var(--blue-dim);color:var(--blue);font-size:12px;font-weight:700;padding:5px 14px;border-radius:100px;margin-bottom:28px;border:1px solid var(--blue-mid);font-family:'IBM Plex Mono',monospace;}
+  .hero-label::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--blue);animation:pulse 2s ease infinite;}
+  .hero h1{font-size:clamp(32px,6vw,56px);font-weight:900;letter-spacing:-2px;line-height:1.1;margin-bottom:20px;word-break:keep-all;}
+  .hero-desc{font-size:16px;color:var(--text-sub);line-height:1.85;max-width:480px;word-break:keep-all;}
+
+  /* SECTION */
+  .section{max-width:900px;margin:0 auto;padding:0 clamp(20px,5vw,40px) 100px;}
+  .section-eye{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:1px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;margin-bottom:24px;display:flex;align-items:center;gap:10px;}
+  .section-eye::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* PROJECT CARDS */
+  .projects{display:flex;flex-direction:column;gap:16px;}
+
+  .proj-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:32px;display:flex;gap:28px;align-items:flex-start;text-decoration:none;color:inherit;transition:box-shadow .25s,transform .25s,background .25s,border-color .25s;opacity:0;transform:translateY(12px);}
+  .proj-card.visible{opacity:1;transform:translateY(0);}
+  .proj-card:hover{box-shadow:var(--shadow-md);transform:translateY(-3px);background:var(--card2);}
+
+  .proj-card.blue:hover  {border-color:rgba(79,142,247,0.3);}
+  .proj-card.purple:hover{border-color:rgba(167,139,250,0.3);}
+  .proj-card.teal:hover  {border-color:rgba(45,212,191,0.3);}
+  .proj-card.green:hover {border-color:rgba(52,211,153,0.3);}
+  .proj-card.yellow:hover{border-color:rgba(251,191,36,0.3);}
+
+  /* Number badge */
+  .proj-num{flex-shrink:0;width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;font-family:'IBM Plex Mono',monospace;letter-spacing:-1px;}
+  .num-blue  {background:var(--blue-dim);  color:var(--blue);  border:1px solid var(--blue-mid);}
+  .num-purple{background:var(--purple-dim);color:var(--purple);border:1px solid var(--purple-mid);}
+  .num-green {background:var(--green-dim); color:var(--green); border:1px solid rgba(52,211,153,0.25);}
+  .num-teal  {background:var(--teal-dim);  color:var(--teal);  border:1px solid var(--teal-mid);}
+  .num-yellow{background:var(--yellow-dim);color:var(--yellow-card);border:1px solid var(--yellow-mid);}
+
+  .proj-body{flex:1;min-width:0;}
+  .proj-category{font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;font-family:'IBM Plex Mono',monospace;margin-bottom:8px;}
+  .cat-blue  {color:var(--blue);}
+  .cat-purple{color:var(--purple);}
+  .cat-green {color:var(--green);}
+  .cat-teal  {color:var(--teal);}
+  .cat-yellow{color:var(--yellow-card);}
+  .beta-tag{display:inline-block;background:var(--yellow-dim);color:var(--yellow-card);font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;border:1px solid var(--yellow-mid);font-family:'IBM Plex Mono',monospace;vertical-align:middle;margin-left:6px;letter-spacing:0.3px;}
+
+  .proj-title{font-size:clamp(17px,2.5vw,22px);font-weight:800;letter-spacing:-0.6px;line-height:1.25;margin-bottom:10px;word-break:keep-all;}
+  .proj-desc{font-size:13px;color:var(--text-sub);line-height:1.75;margin-bottom:16px;word-break:keep-all;}
+  .proj-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:18px;}
+  .ptag{background:var(--bg2);color:var(--text-muted);font-size:11px;font-weight:500;padding:4px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);}
+
+  .proj-meta{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .proj-chips{display:flex;gap:8px;flex-wrap:wrap;}
+  .pchip{font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:4px;}
+  .pchip .dot{width:3px;height:3px;border-radius:50%;background:var(--text-muted);}
+
+  .proj-arrow{flex-shrink:0;width:36px;height:36px;border-radius:10px;background:var(--bg2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-muted);transition:all .2s;}
+  .proj-card:hover .proj-arrow{background:var(--blue-dim);border-color:var(--blue-mid);color:var(--blue);}
+  .proj-card.purple:hover .proj-arrow{background:var(--purple-dim);border-color:var(--purple-mid);color:var(--purple);}
+  .proj-card.teal:hover   .proj-arrow{background:var(--teal-dim);  border-color:var(--teal-mid);      color:var(--teal);}
+  .proj-card.green:hover  .proj-arrow{background:var(--green-dim); border-color:rgba(52,211,153,0.25);color:var(--green);}
+  .proj-card.yellow:hover .proj-arrow{background:var(--yellow-dim);border-color:var(--yellow-mid);color:var(--yellow-card);}
+
+  /* FOOTER */
+  .contact-block{background:var(--card);border:1px solid var(--border);border-radius:16px;overflow:hidden;}
+  .contact-row{display:flex;align-items:center;gap:24px;padding:18px 28px;border-bottom:1px solid var(--border);}
+  .contact-row:last-child{border-bottom:none;}
+  .contact-lbl{font-size:12px;font-weight:700;color:var(--text-muted);width:52px;flex-shrink:0;font-family:'IBM Plex Mono',monospace;}
+  .contact-val{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-0.3px;}
+  .contact-link{text-decoration:none;transition:color .2s;}
+  .contact-link:hover{color:var(--accent);}
+
+  footer{border-top:1px solid var(--border);padding:32px clamp(20px,5vw,40px) 48px;max-width:900px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .ft-l{font-size:13px;color:var(--text-muted);}
+  .ft-r{font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+  @media(max-width:600px){
+    .proj-card{flex-direction:column;gap:16px;}
+    .proj-arrow{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">Port<em>folio</em></div>
+  <div class="nav-links">
+    <a href="#work">Work</a>
+    <a href="#contact">Contact</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="hero-label">Projects</div>
+  <h1>불편함을 그냥 지나치지 않고,<br>직접 만들어 해결합니다.</h1>
+  <p class="hero-desc">기존 툴이 해결해주지 못하는 문제를 직접 발견하고, 데이터 분석과 개발을 수단으로 삼아 직접 솔루션을 만들어온 프로젝트들입니다.</p>
+</div>
+
+<div class="section" id="work">
+  <div class="projects">
+
+    <!-- 01 J414 -->
+    <a class="proj-card teal" href="portfolio_J414_J416.html">
+      <div class="proj-num num-teal">01</div>
+      <div class="proj-body">
+        <div class="proj-category cat-teal">Data Analysis · Quality</div>
+        <div class="proj-title">MacBook Pro M2 14/16<br>비정상 재수리율 원인 파악 및 개선</div>
+        <p class="proj-desc">Pegatron Australia에서 근무 할 당시 발생했던, 특정 에러 코드에서 70%에 달하는 재수리율을 데이터 분석으로 원인을 규명하고, SOP 재정립을 통해 전체 모델 품질 관리 체계를 개선한 실무 기반 프로젝트.</p>
+        <div class="proj-tags">
+          <span class="ptag">호주 현지 실무 기반</span>
+          <span class="ptag">Data Analysis</span>
+          <span class="ptag">SOP</span>
+          <span class="ptag">Communication</span>
+        </div>
+        <div class="proj-meta">
+          <div class="proj-chips">
+            <span class="pchip">2023.11 — 2023.12</span>
+            <span class="pchip"><span class="dot"></span>Debug Team Leader</span>
+          </div>
+        </div>
+      </div>
+      <div class="proj-arrow">→</div>
+    </a>
+
+    <!-- 02 캔들 예측 AI -->
+    <a class="proj-card yellow" href="portfolio_캔들예측AI.html">
+      <div class="proj-num num-yellow">02</div>
+      <div class="proj-body">
+        <div class="proj-category cat-yellow">Python · AI · Modeling</div>
+        <div class="proj-title">캔들 패턴 기반 주가 방향 예측 AI</div>
+        <p class="proj-desc">기획 → 데이터 설계 → 모델링 전 과정을 직접 주도한 프로젝트. 트레이더의 주관적 판단 문제를 정의하고, 50개 이상의 피처와 XGBoost 모델로 방향성 예측 솔루션을 설계·구현했습니다.</p>
+        <div class="proj-tags">
+          <span class="ptag">Python</span>
+          <span class="ptag">ML Model</span>
+          <span class="ptag">Plotly</span>
+          <span class="ptag">yfinance</span>
+        </div>
+        <div class="proj-meta">
+          <div class="proj-chips">
+            <span class="pchip">2026.02 — 2026.03</span>
+            <span class="pchip"><span class="dot"></span>v1.0</span>
+          </div>
+        </div>
+      </div>
+      <div class="proj-arrow">→</div>
+    </a>
+
+    <!-- 03 스캘핑 -->
+    <a class="proj-card purple" href="portfolio_스캘핑대시보드.html">
+      <div class="proj-num num-purple">03</div>
+      <div class="proj-body">
+        <div class="proj-category cat-purple">Python · Dashboard · Trading</div>
+        <div class="proj-title">코인 &amp; 미국 증시<br>단타 스캘핑 의사결정 대시보드</div>
+        <p class="proj-desc">기획 → 데이터 설계 → 구현 전 과정을 직접 주도한 프로젝트. 단타 트레이더의 분산된 정보 문제를 정의하고, 실시간 호가·박스권·잔량 비중을 한 화면에 집약한 의사결정 대시보드를 설계·구현했습니다.</p>
+        <div class="proj-tags">
+          <span class="ptag">Python</span>
+          <span class="ptag">Streamlit</span>
+          <span class="ptag">pyupbit</span>
+          <span class="ptag">yfinance</span>
+          <span class="ptag">Plotly</span>
+        </div>
+        <div class="proj-meta">
+          <div class="proj-chips">
+            <span class="pchip">2026.02</span>
+            <span class="pchip"><span class="dot"></span>v5.0</span>
+          </div>
+        </div>
+      </div>
+      <div class="proj-arrow">→</div>
+    </a>
+  </div>
+</div>
+
+  <div class="section" id="contact">
+    <div class="projects" style="display:flex;flex-direction:column;gap:0;">
+      <div class="contact-block">
+        <div class="contact-row">
+          <span class="contact-lbl">Name</span>
+          <span class="contact-val">최지우</span>
+        </div>
+        <div class="contact-row">
+          <span class="contact-lbl">Email</span>
+          <a class="contact-val contact-link" href="mailto:jiwoo7875@naver.com">jiwoo7875@naver.com</a>
+        </div>
+        <div class="contact-row">
+          <span class="contact-lbl">Phone</span>
+          <a class="contact-val contact-link" href="tel:01049234029">010 · 4923 · 4029</a>
+        </div>
+        <div class="contact-row">
+          <span class="contact-lbl">GitHub</span>
+          <a class="contact-val contact-link" href="https://github.com/JiwooChoiBusiness/portfolio" target="_blank">github.com/JiwooChoiBusiness</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <div class="ft-l">포트폴리오</div>
+  <div class="ft-r">2026</div>
+</footer>
+
+<script>
+  const cards = document.querySelectorAll('.proj-card');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) setTimeout(() => e.target.classList.add('visible'), i * 80);
+    });
+  }, { threshold: 0.1 });
+  cards.forEach(el => obs.observe(el));
+
+  const sections = document.querySelectorAll('#work, #contact');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  const navObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => navObs.observe(s));
+</script>
+</body>
+</html>
