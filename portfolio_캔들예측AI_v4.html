@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>캔들 패턴 기반 주가 방향 예측 AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:          #111114;
+    --bg2:         #18181c;
+    --card:        #1c1c20;
+    --card2:       #222228;
+    --border:      rgba(255,255,255,0.07);
+    --text:        #f0f0f5;
+    --text-sub:    #9ca3af;
+    --text-muted:  #5c6370;
+    --yellow:      #fbbf24;
+    --yellow-dim:  rgba(251,191,36,0.12);
+    --yellow-mid:  rgba(251,191,36,0.25);
+    --blue:        #4f8ef7;
+    --blue-dim:    rgba(79,142,247,0.12);
+    --blue-mid:    rgba(79,142,247,0.25);
+    --green:       #34d399;
+    --green-dim:   rgba(52,211,153,0.12);
+    --red:         #f25c69;
+    --red-dim:     rgba(242,92,105,0.12);
+    --radius:      16px;
+    --radius-sm:   10px;
+    --shadow:      0 2px 16px rgba(0,0,0,0.4);
+    --shadow-md:   0 4px 28px rgba(0,0,0,0.5);
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;scroll-padding-top:60px;}
+  body{background:var(--bg);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+
+  /* NAV */
+  nav{position:sticky;top:0;z-index:100;background:rgba(17,17,20,0.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:0 clamp(20px,6vw,80px);height:60px;display:flex;align-items:center;justify-content:space-between;}
+  .nav-logo{font-size:15px;font-weight:700;letter-spacing:-0.3px;color:var(--text);}
+  .nav-back{font-size:13px;color:var(--text-muted);text-decoration:none;display:flex;align-items:center;gap:6px;transition:color .2s;font-weight:500;}
+  .nav-back:hover{color:var(--text);}
+  .nav-logo span{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--yellow);margin-left:4px;vertical-align:middle;margin-bottom:1px;animation:pulse 2s ease infinite;}
+  .nav-links{display:flex;gap:28px;list-style:none;}
+  .nav-links a{text-decoration:none;font-size:13px;font-weight:500;color:var(--text-muted);transition:color .2s;}
+  .nav-links a:hover{color:var(--text);}
+  .nav-links a.active{color:var(--yellow);}
+
+  /* WRAP */
+  .wrap{max-width:840px;margin:0 auto;padding:0 clamp(20px,5vw,40px);}
+
+  /* HERO */
+  .hero{padding:80px 0 60px;opacity:0;animation:fadeUp .5s ease .1s forwards;}
+  .hero-chip{display:inline-flex;align-items:center;gap:6px;background:var(--yellow-dim);color:var(--yellow);font-size:12px;font-weight:700;padding:5px 14px;border-radius:100px;margin-bottom:24px;border:1px solid var(--yellow-mid);}
+  .hero-chip::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--yellow);animation:pulse 2s ease infinite;}
+  .hero h1{font-size:clamp(30px,5.5vw,50px);font-weight:900;letter-spacing:-1.5px;line-height:1.15;margin-bottom:18px;word-break:keep-all;}
+  .hero h1 .accent{color:var(--yellow);}
+  .hero-desc{font-size:16px;color:var(--text-sub);line-height:1.8;max-width:540px;margin-bottom:36px;word-break:keep-all;}
+  .hero-chips{display:flex;flex-wrap:wrap;gap:8px;}
+  .info-chip{background:var(--card);border:1px solid var(--border);border-radius:100px;padding:7px 16px;font-size:13px;font-weight:500;color:var(--text-sub);display:flex;align-items:center;gap:6px;}
+  .info-chip .lbl{color:var(--text-muted);font-size:12px;}
+
+  /* VIDEO */
+  .vid-outer{padding:0 0 56px;}
+  .sec-eye{font-size:12px;font-weight:700;color:var(--yellow);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:8px;}
+  .video-box{background:#0a0a0d;border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-md);}
+  .video-topbar{background:#111116;padding:11px 16px;display:flex;align-items:center;gap:7px;border-bottom:1px solid var(--border);}
+  .wd{width:11px;height:11px;border-radius:50%;}
+  .wd-r{background:#ff5f57;}.wd-y{background:#febc2e;}.wd-g{background:#28c840;}
+  .win-title{margin-left:8px;font-size:12px;color:rgba(255,255,255,0.25);font-family:'IBM Plex Mono',monospace;}
+  .vp-badge{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;font-family:'IBM Plex Mono',monospace;color:var(--yellow);font-weight:500;}
+  .vp-dot{width:6px;height:6px;border-radius:50%;background:var(--yellow);animation:pulse 2s ease infinite;}
+  .video-placeholder{width:100%;aspect-ratio:16/9;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:linear-gradient(135deg,#111116 0%,#17171c 100%);}
+  .vp-btn{width:58px;height:58px;border-radius:50%;background:var(--yellow-dim);border:1px solid var(--yellow-mid);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--yellow);}
+  .vp-name{font-size:13px;color:var(--text-sub);font-family:'IBM Plex Mono',monospace;}
+  .vp-hint{font-size:11px;color:var(--text-muted);}
+  .video-box video{width:100%;display:block;max-height:520px;object-fit:contain;background:#0a0a0d;}
+
+  /* SECTION */
+  .sec{padding:0 0 56px;}
+  .sec-title{font-size:clamp(20px,3.5vw,26px);font-weight:800;letter-spacing:-0.8px;line-height:1.25;margin-bottom:20px;word-break:keep-all;}
+  .div-line{border:none;border-top:1px solid var(--border);margin:0 0 56px;}
+  .s-sub{font-size:12px;font-weight:700;color:var(--text-muted);letter-spacing:0.5px;text-transform:uppercase;margin-bottom:10px;}
+
+  /* CARDS */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .card-base{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:26px;transition:box-shadow .2s,transform .2s,background .2s;}
+  .card-base:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);background:var(--card2);}
+  .pain-badge{display:inline-block;background:var(--red-dim);color:var(--red);font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;margin-bottom:12px;border:1px solid rgba(242,92,105,0.2);}
+  .card-base h3{font-size:15px;font-weight:700;letter-spacing:-0.3px;margin-bottom:8px;}
+  .card-base p{font-size:13px;color:var(--text-sub);line-height:1.7;word-break:keep-all;}
+
+  /* TABLE */
+  .tbl-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;padding:10px 16px;color:var(--text-muted);font-size:11px;font-weight:700;font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;border-bottom:1px solid var(--border);background:var(--bg2);}
+  .result-tbl th{font-family:'Noto Sans KR',sans-serif;font-size:12px;letter-spacing:-0.2px;color:var(--text-sub);}
+  td{padding:13px 16px;border-bottom:1px solid var(--border);color:var(--text-sub);line-height:1.65;vertical-align:top;}
+  td:first-child{font-weight:700;color:var(--text);}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:rgba(255,255,255,0.015);}
+  .hl-row td{color:var(--text)!important;}
+  .hl-row td:first-child{color:var(--yellow)!important;}
+
+  /* QUESTION BOX */
+  .q-box{margin-top:16px;padding:16px 20px;background:rgba(251,191,36,0.05);border:1px solid var(--yellow-mid);border-left:3px solid var(--yellow);border-radius:0 10px 10px 0;font-size:13px;color:var(--text-sub);line-height:1.7;}
+  .q-box strong{color:var(--yellow);}
+
+  /* PERSONA */
+  .persona-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .persona-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;transition:box-shadow .2s,transform .2s,background .2s;}
+  .persona-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);background:var(--card2);}
+  .p-tag{font-size:11px;font-weight:700;color:var(--yellow);letter-spacing:0.3px;text-transform:uppercase;margin-bottom:10px;}
+  .p-name{font-size:18px;font-weight:900;letter-spacing:-0.5px;margin-bottom:3px;}
+  .p-info{font-size:12px;color:var(--text-muted);margin-bottom:14px;font-family:'IBM Plex Mono',monospace;}
+  .p-row{display:flex;gap:10px;margin-bottom:7px;font-size:13px;color:var(--text-sub);line-height:1.65;}
+  .p-key{flex-shrink:0;font-size:11px;font-weight:700;color:var(--text-muted);padding-top:1px;width:42px;}
+  .p-quote{margin-top:14px;padding:12px 14px;background:var(--bg2);border-radius:8px;border-left:2px solid var(--yellow);font-size:12px;color:var(--text-sub);line-height:1.65;font-style:italic;}
+
+  /* DIFF */
+  .diff-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;}
+  .diff-item{background:var(--yellow-dim);border:1px solid var(--yellow-mid);border-radius:12px;padding:13px 16px;font-size:13px;color:var(--text-sub);line-height:1.6;}
+  .diff-item strong{color:var(--yellow);}
+
+  /* HYPOTHESIS */
+  .hypo-list{display:flex;flex-direction:column;gap:10px;}
+  .hypo-item{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:20px 22px;display:flex;gap:14px;align-items:flex-start;transition:box-shadow .2s,background .2s;}
+  .hypo-item:hover{box-shadow:var(--shadow);background:var(--card2);}
+  .h-badge{flex-shrink:0;background:var(--yellow-dim);border:1px solid var(--yellow-mid);color:var(--yellow);font-size:12px;font-weight:700;font-family:'IBM Plex Mono',monospace;padding:3px 10px;border-radius:7px;margin-top:2px;}
+  .h-body h3{font-size:14px;font-weight:700;margin-bottom:5px;word-break:keep-all;line-height:1.55;letter-spacing:-0.2px;}
+  .h-body p{font-size:12px;color:var(--text-muted);line-height:1.6;}
+
+  /* FLOW */
+  .flow-list{display:flex;flex-direction:column;}
+  .flow-item{display:flex;gap:18px;padding-bottom:22px;}
+  .flow-item:last-child{padding-bottom:0;}
+  .flow-l{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+  .f-dot{width:34px;height:34px;border-radius:50%;background:var(--yellow-dim);color:var(--yellow);font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;border:1px solid var(--yellow-mid);}
+  .f-line{width:1px;flex:1;background:var(--border);margin-top:5px;}
+  .flow-item:last-child .f-line{display:none;}
+  .flow-b{padding-top:6px;}
+  .flow-b h3{font-size:15px;font-weight:700;letter-spacing:-0.3px;margin-bottom:5px;}
+  .flow-b p{font-size:13px;color:var(--text-sub);line-height:1.7;word-break:keep-all;}
+  .f-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .tag{background:var(--bg2);color:var(--text-muted);font-size:11px;font-weight:500;padding:3px 9px;border-radius:6px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);}
+
+  /* OUTPUT GRID */
+  .out-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:8px;margin-top:10px;}
+  .out-item{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .out-item h4{font-size:12px;font-weight:700;color:var(--yellow);margin-bottom:4px;font-family:'Noto Sans KR',sans-serif;letter-spacing:-0.2px;}
+  .out-item p{font-size:12px;color:var(--text-sub);line-height:1.5;}
+
+  /* P-TAGS */
+  .pp0{display:inline-block;background:var(--yellow-dim);color:var(--yellow);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;font-family:'IBM Plex Mono',monospace;}
+  .pp1{display:inline-block;background:var(--blue-dim);color:var(--blue);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;font-family:'IBM Plex Mono',monospace;}
+  .pp2{display:inline-block;background:var(--bg2);color:var(--text-muted);font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px;font-family:'IBM Plex Mono',monospace;border:1px solid var(--border);}
+
+  /* DATA GRID */
+  .data-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;}
+  .data-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:18px;transition:box-shadow .2s,background .2s;}
+  .data-card:hover{box-shadow:var(--shadow);background:var(--card2);}
+  .d-cat{font-size:11px;font-weight:700;color:var(--yellow);letter-spacing:0.3px;font-family:'IBM Plex Mono',monospace;margin-bottom:10px;text-transform:uppercase;}
+  .data-card ul{list-style:none;display:flex;flex-direction:column;gap:5px;}
+  .data-card li{font-size:12px;color:var(--text-sub);display:flex;align-items:center;gap:7px;}
+  .data-card li::before{content:'';width:3px;height:3px;border-radius:50%;background:var(--yellow-mid);flex-shrink:0;}
+
+  /* LABELS */
+  .label-row{display:flex;flex-wrap:wrap;gap:10px;}
+  .lpill{padding:9px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;font-family:'IBM Plex Mono',monospace;display:flex;align-items:center;gap:8px;}
+  .lp-bull{background:var(--green-dim);border:1px solid rgba(52,211,153,0.25);color:var(--green);}
+  .lp-bear{background:var(--red-dim);border:1px solid rgba(242,92,105,0.25);color:var(--red);}
+  .lp-neut{background:var(--bg2);border:1px solid var(--border);color:var(--text-muted);}
+
+  /* PERF BAR */
+  .acc-row{display:flex;align-items:center;gap:8px;}
+  .bar-t{flex:1;height:5px;background:var(--bg2);border-radius:3px;overflow:hidden;}
+  .bar-f{height:100%;border-radius:3px;background:var(--yellow);}
+  .bar-l{font-size:11px;color:var(--text-muted);white-space:nowrap;min-width:52px;}
+
+  /* ACHIEVE */
+  .achieve-list{display:flex;flex-direction:column;gap:8px;}
+  .a-item{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius-sm);padding:13px 16px;font-size:13px;color:var(--text-sub);transition:box-shadow .2s,background .2s;}
+  .a-item:hover{box-shadow:var(--shadow);background:var(--card2);}
+  .a-icon{font-size:16px;flex-shrink:0;}
+  .a-item strong{color:var(--yellow);}
+
+  /* IMPROVE */
+  .improve-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .imp-card{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;transition:box-shadow .2s,transform .2s,background .2s;}
+  .imp-card:hover{box-shadow:var(--shadow-md);transform:translateY(-2px);background:var(--card2);}
+  .imp-card h3{font-size:15px;font-weight:700;letter-spacing:-0.3px;margin-bottom:8px;}
+  .imp-card p{font-size:13px;color:var(--text-sub);line-height:1.7;word-break:keep-all;}
+
+  /* FOOTER */
+  /* USER FLOW */
+  .flow-section{display:flex;flex-direction:column;gap:28px;}
+  .flow-block{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;}
+  .flow-block-label{display:flex;align-items:center;gap:10px;margin-bottom:20px;}
+  .flow-block-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:100px;font-family:'IBM Plex Mono',monospace;}
+  .badge-before{background:var(--red-dim);color:var(--red);border:1px solid rgba(242,92,105,0.25);}
+  .badge-after{background:var(--green-dim);color:var(--green);border:1px solid rgba(52,211,153,0.25);}
+  .flow-block-desc{font-size:12px;color:var(--text-muted);margin-left:2px;}
+  .flow-steps{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding-bottom:4px;justify-content:center;}
+  .flow-step{display:flex;align-items:center;flex-shrink:0;}
+  .flow-step-inner{display:flex;flex-direction:column;align-items:center;gap:8px;width:120px;}
+  .flow-step-box{width:100%;background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:12px 10px;text-align:center;}
+  .flow-step-box.before{border-color:rgba(242,92,105,0.2);}
+  .flow-step-box.after{border-color:rgba(52,211,153,0.2);}
+  .flow-step-emoji{font-size:20px;display:block;margin-bottom:6px;}
+  .flow-step-name{font-size:12px;font-weight:700;color:var(--text);letter-spacing:-0.2px;line-height:1.4;}
+  .flow-step-comment{font-size:11px;color:var(--text-muted);line-height:1.5;text-align:center;padding:0 4px;}
+  .flow-step-emotion{font-size:11px;font-weight:700;margin-top:2px;}
+  .emotion-bad{color:var(--red);}
+  .emotion-good{color:var(--green);}
+  .emotion-mid{color:var(--yellow);}
+  .flow-arrow{font-size:16px;color:var(--border);margin:0 6px;padding-bottom:40px;flex-shrink:0;}
+
+  footer{border-top:1px solid var(--border);padding:32px 0 64px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+  .ft-l{font-size:14px;font-weight:700;color:var(--text-sub);letter-spacing:-0.3px;}
+  .ft-r{font-size:12px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  .reveal{opacity:0;transform:translateY(10px);transition:opacity .4s,transform .4s;}
+  .reveal.visible{opacity:1;transform:translateY(0);}
+
+  @media(max-width:640px){
+    .two-col,.persona-grid,.improve-grid,.diff-grid{grid-template-columns:1fr;}
+    .nav-links{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-back" href="index.html">← 뒤로</a>
+  <ul class="nav-links">
+    <li><a href="#sec-problem">문제</a></li>
+    <li><a href="#sec-user">사용자</a></li>
+    <li><a href="#sec-userflow">흐름</a></li>
+    <li><a href="#sec-market">시장</a></li>
+    <li><a href="#sec-hypothesis">가설</a></li>
+    <li><a href="#sec-product">제품</a></li>
+    <li><a href="#sec-data">데이터</a></li>
+    <li><a href="#sec-result">결과</a></li>
+    <li><a href="#sec-improve">개선</a></li>
+  </ul>
+</nav>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-chip">개인 프로젝트 · v4</div>
+    <h1>캔들 패턴 기반<br><span class="accent">주가 방향 예측 AI</span></h1>
+    <p class="hero-desc">기존 차트 분석 툴이 제공하지 못하는 패턴 기반 예측을 직접 만들어보고자 시작한 프로젝트.<br>지표 해석의 주관성을 제거하고, 누구나 일관된 매매 판단을 내릴 수 있도록 설계합니다.</p>
+    <div class="hero-chips">
+      <div class="info-chip"><span class="lbl">기간</span>2026.02 — 2026.03</div>
+      <div class="info-chip"><span class="lbl">대상</span>미국 주식 단기 트레이더</div>
+      <div class="info-chip"><span class="lbl">버전</span>v4</div>
+    </div>
+  </div>
+
+  <!-- 실사용 영상 -->
+  <div class="vid-outer reveal">
+    <div class="sec-eye">차트 분석 AI 실사용 영상</div>
+    <div class="video-box">
+      <div class="video-topbar">
+        <div class="wd wd-r"></div><div class="wd wd-y"></div><div class="wd wd-g"></div>
+        <span class="win-title">AI_chart_ml.mp4</span>
+        <div class="vp-badge"><div class="vp-dot"></div>v4</div>
+      </div>
+      <video controls>
+        <source src="AI_chart_ml.mp4" type="video/mp4">
+      </video>
+    </div>
+  </div>
+
+  <!-- 01 문제 정의 -->
+  <div id="sec-problem" class="sec reveal">
+    <div class="sec-eye">01 · Problem Definition</div>
+    <div class="sec-title">문제 정의</div>
+    <div class="two-col" style="margin-bottom:16px;">
+      <div class="card-base">
+        <span class="pain-badge">페인 포인트 01</span>
+        <h3>주관적 판단</h3>
+        <p>같은 차트를 보고도 사람마다 다른 결론을 도출합니다. 지표 해석에 객관적 기준이 없어 매매 판단이 일관되지 않습니다.</p>
+      </div>
+      <div class="card-base">
+        <span class="pain-badge">페인 포인트 02</span>
+        <h3>인지 과부하 & 일관성 부족</h3>
+        <p>5분봉 기준 하루 78봉 × 여러 지표를 동시에 해석해야 하며, 피로도·심리 상태에 따라 판단 기준이 달라져 일관성이 무너집니다.</p>
+      </div>
+    </div>
+    <div class="q-box">
+      <strong>핵심 질문</strong><br>
+      "다수의 기술 지표를 일관되게 종합하여, 트레이더의 판단을 보조할 수 있는가?"
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 02 사용자 분석 -->
+  <div id="sec-user" class="sec reveal">
+    <div class="sec-eye">02 · User Analysis</div>
+    <div class="sec-title">사용자 분석</div>
+    <p style="font-size:14px;color:var(--text-sub);line-height:1.8;margin-bottom:20px;">미국 주식 단기 트레이딩에 관심 있는 개인 투자자. 기술적 분석을 알고 있지만 실시간 판단이 어려운 <strong style="color:var(--text);">입문~중급자</strong>를 타겟으로 합니다.</p>
+    <div class="persona-grid">
+      <div class="persona-card">
+        <div class="p-tag">Persona A — 바쁜 직장인 트레이더</div>
+        <div class="p-name">김지훈</div>
+        <div class="p-info">34세 · 직장인 (낮 업무, 자기 전 트레이딩)</div>
+        <div class="p-row"><span class="p-key">목표</span><span>빠르게 종목 방향성 파악 후 진입 여부 결정</span></div>
+        <div class="p-row"><span class="p-key">불편함</span><span>여러 지표 탭 오가며 확인, 피로감으로 집중력 저하</span></div>
+        <div class="p-quote">"피곤하다. 종목 하나 검색하면 바로 매수/매도/관망 알려줬으면"</div>
+      </div>
+      <div class="persona-card">
+        <div class="p-tag">Persona B — 퀀트 입문자</div>
+        <div class="p-name">박서연</div>
+        <div class="p-info">28세 · 대학원생 (Python 가능, 금융 데이터 공부)</div>
+        <div class="p-row"><span class="p-key">목표</span><span>모델 예측 결과와 실제 지표를 비교하며 학습</span></div>
+        <div class="p-row"><span class="p-key">불편함</span><span>지표 계산은 하는데 매매 판단으로 연결하는 법을 모름</span></div>
+        <div class="p-quote">"어떤 지표가 이 신호에 영향을 줬는지 근거도 보여줬으면"</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 02-1 사용자 흐름 설계 -->
+  <div id="sec-userflow" class="sec reveal">
+    <div class="sec-eye">02-1 · User Flow</div>
+    <div class="sec-title">사용자 흐름 설계</div>
+    <p style="font-size:14px;color:var(--text-sub);line-height:1.8;margin-bottom:24px;">기존 방식과 이 앱 사용 후의 흐름을 나란히 비교합니다. 각 단계에서 사용자가 느끼는 감정 변화에 주목했습니다.</p>
+
+    <div class="flow-section">
+
+      <!-- BEFORE -->
+      <div class="flow-block">
+        <div class="flow-block-label">
+          <span class="flow-block-badge badge-before">Before</span>
+          <span class="flow-block-desc">기존 차트 분석 방식 — 분산된 정보, 주관적 판단</span>
+        </div>
+        <div class="flow-steps">
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box before">
+                <span class="flow-step-emoji">📱</span>
+                <div class="flow-step-name">차트 앱 열기</div>
+              </div>
+              <div class="flow-step-comment">오늘도 피곤하지만 종목 분석 시작</div>
+              <div class="flow-step-emotion emotion-mid">기대 반 피로 반</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box before">
+                <span class="flow-step-emoji">📊</span>
+                <div class="flow-step-name">지표 하나씩 확인</div>
+              </div>
+              <div class="flow-step-comment">RSI, MACD, 볼린저밴드 탭 이동</div>
+              <div class="flow-step-emotion emotion-bad">인지 과부하</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box before">
+                <span class="flow-step-emoji">💬</span>
+                <div class="flow-step-name">커뮤니티 눈팅</div>
+              </div>
+              <div class="flow-step-comment">남들 의견에 휘둘리기  시작</div>
+              <div class="flow-step-emotion emotion-bad">판단 흐려짐</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box before">
+                <span class="flow-step-emoji">🎲</span>
+                <div class="flow-step-name">감으로 결정</div>
+              </div>
+              <div class="flow-step-comment">결국 주관적 판단에 의존하며 손실</div>
+              <div class="flow-step-emotion emotion-bad">확신 없는 매매</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- AFTER -->
+      <div class="flow-block">
+        <div class="flow-block-label">
+          <span class="flow-block-badge badge-after">After</span>
+          <span class="flow-block-desc">이 앱 사용 후 — 데이터 기반 판단, 일관된 흐름</span>
+        </div>
+        <div class="flow-steps">
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box after">
+                <span class="flow-step-emoji">🔍</span>
+                <div class="flow-step-name">티커 입력</div>
+              </div>
+              <div class="flow-step-comment">NVDA 검색 한 번으로 시작</div>
+              <div class="flow-step-emotion emotion-mid">간단한 시작</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box after">
+                <span class="flow-step-emoji">⚡</span>
+                <div class="flow-step-name">5초 대기</div>
+              </div>
+              <div class="flow-step-comment">50+ 피처 5초 이내 자동 계산 중</div>
+              <div class="flow-step-emotion emotion-mid">짧은 기다림</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box after">
+                <span class="flow-step-emoji">📋</span>
+                <div class="flow-step-name">결과 + 근거 확인</div>
+              </div>
+              <div class="flow-step-comment">신뢰도 62% BULLISH + 근거 텍스트</div>
+              <div class="flow-step-emotion emotion-good">명확한 정보</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→</div>
+
+          <div class="flow-step">
+            <div class="flow-step-inner">
+              <div class="flow-step-box after">
+                <span class="flow-step-emoji">✅</span>
+                <div class="flow-step-name">확신 있는 판단</div>
+              </div>
+              <div class="flow-step-comment">근거 기반 매수 결정 후 이익 실현</div>
+              <div class="flow-step-emotion emotion-good">데이터 기반 확신</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 03 시장 분석 -->
+  <div id="sec-market" class="sec reveal">
+    <div class="sec-eye">03 · Market Analysis</div>
+    <div class="sec-title">시장 분석 및 경쟁력</div>
+    <p style="font-size:14px;color:var(--text-sub);line-height:1.8;margin-bottom:20px;">국내 MTS/HTS 기반 개인 투자자 증가세 지속 · AI 및 ML 기반 트레이딩 보조 도구 수요 증가 · 기존 도구 대부분이 <strong style="color:var(--text);">전문가 대상 또는 고비용</strong> SaaS 형태</p>
+    <div class="tbl-wrap" style="margin-bottom:18px;">
+      <table>
+        <thead><tr><th>서비스</th><th>강점</th><th>약점</th></tr></thead>
+        <tbody>
+          <tr><td>TradingView</td><td>풍부한 지표 및 커뮤니티</td><td>예측 기능 없음, 유료</td></tr>
+          <tr><td>StockCharts</td><td>기술적 분석 특화</td><td>ML 예측 없음, 영어 전용</td></tr>
+          <tr><td>Kavout / Alpaca</td><td>ML 기반 신호 제공</td><td>고비용, API 진입장벽 높음</td></tr>
+          <tr class="hl-row"><td>본 제품</td><td>ML 예측 + 근거 텍스트 + 즉시 조회</td><td>백테스트 데이터 제한적</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="diff-grid">
+      <div class="diff-item">✦ 예측 결과와 함께 <strong>"왜 상승인가"</strong>를 자연어로 설명</div>
+      <div class="diff-item">✦ 티커 입력 → <strong>5초 내 결과</strong> 출력 (실제 데이터는 100% 3초 이내 달성)</div>
+      <div class="diff-item">✦ <strong>초보자도 사용 가능</strong>한 높은 접근성 (직관적인 디자인, 직관적인 설명)</div>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 04 가설 설정 -->
+  <div id="sec-hypothesis" class="sec reveal">
+    <div class="sec-eye">04 · Hypothesis</div>
+    <div class="sec-title">가설 설정</div>
+    <div class="hypo-list">
+      <div class="hypo-item">
+        <div class="h-badge">H1</div>
+        <div class="h-body">
+          <h3>90개 이상의 기술 지표 + 거시지표 + 섹터 피처를 조합하면 단순 지표 단독보다 방향 예측 정확도가 높을 것이다</h3>
+          <p>검증 방법 — 피처 중요도 분석 + 단일 지표 대비 정확도 비교</p>
+        </div>
+      </div>
+      <div class="hypo-item">
+        <div class="h-badge">H2</div>
+        <div class="h-body">
+          <h3>Confidence Threshold를 높일수록 신호 수는 줄지만 정확도는 올라갈 것이다</h3>
+          <p>검증 방법 — 임계값(40~65%) 구간별 정확도 및 신호 수 측정</p>
+        </div>
+      </div>
+      <div class="hypo-item">
+        <div class="h-badge">H3</div>
+        <div class="h-body">
+          <h3>다종목 통합 학습 모델(47개)이 종목별 개별 모델보다 일반화 성능이 높을 것이다</h3>
+          <p>검증 방법 — 단일 종목 학습 vs 범용 모델 Hold-out 정확도 비교</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 05 제품 설계 -->
+  <div id="sec-product" class="sec reveal">
+    <div class="sec-eye">05 · Product Design</div>
+    <div class="sec-title">제품 설계</div>
+
+    <div class="s-sub" style="margin-bottom:14px;">Service Flow</div>
+    <div class="flow-list" style="margin-bottom:36px;">
+      <div class="flow-item">
+        <div class="flow-l"><div class="f-dot">1</div><div class="f-line"></div></div>
+        <div class="flow-b"><h3>입력 — 티커 입력</h3><p>종목 코드 입력 (ex. AAPL, NVDA)</p></div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-l"><div class="f-dot">2</div><div class="f-line"></div></div>
+        <div class="flow-b">
+          <h3>데이터 수집 — 실시간 5분봉 수집</h3>
+          <p>yfinance API, 최근 5일치 장중 데이터</p>
+          <div class="f-tags"><span class="tag">yfinance API</span></div>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-l"><div class="f-dot">3</div><div class="f-line"></div></div>
+        <div class="flow-b">
+          <h3>피처 생성 — 50+ 피처 자동 생성</h3>
+          <p>캔들 패턴 / MA / VWAP / RSI / MACD / ATR / 지지저항선 등</p>
+          <div class="f-tags"><span class="tag">캔들 패턴</span><span class="tag">MA</span><span class="tag">VWAP</span><span class="tag">RSI</span><span class="tag">MACD</span><span class="tag">ATR</span></div>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-l"><div class="f-dot">4</div><div class="f-line"></div></div>
+        <div class="flow-b">
+          <h3>모델 추론 — XGBoost + CNN 앙상블 예측</h3>
+          <p>학습된 범용 모델로 다음 봉 방향성 추론 · 회귀 모델로 예상 변동폭 및 종가 추가 출력</p>
+          <div class="f-tags"><span class="tag">XGBoost</span><span class="tag">1D CNN</span><span class="tag">앙상블</span><span class="tag">Optuna</span></div>
+        </div>
+      </div>
+      <div class="flow-item">
+        <div class="flow-l"><div class="f-dot">5</div></div>
+        <div class="flow-b">
+          <h3>결과 출력</h3>
+          <div class="out-grid">
+            <div class="out-item"><h4>방향</h4><p>상승 / 하락 / 횡보 3분류</p></div>
+            <div class="out-item"><h4>신뢰도</h4><p>예측 확신도 % 수치화</p></div>
+            <div class="out-item"><h4>시나리오별 확률</h4><p>상승·하락·횡보 각각의 확률 바 차트</p></div>
+            <div class="out-item"><h4>예상 종가</h4><p>회귀 모델 기반 다음 봉 예상 변동폭 및 종가</p></div>
+            <div class="out-item"><h4>캔들차트</h4><p>MA20·VWAP 오버레이 + 예상 종가 수평선</p></div>
+            <div class="out-item"><h4>분석 근거</h4><p>RSI·VWAP·MACD 기반 자연어 해설 자동 생성</p></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Core Features</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>기능</th><th>설명</th><th>우선순위</th></tr></thead>
+        <tbody>
+          <tr><td>즉시 예측</td><td>티커 입력 시 5초 내 결과 반환</td><td><span class="pp0">P0</span></td></tr>
+          <tr><td>확률 시각화</td><td>상승/하락/횡보 확률 바 차트</td><td><span class="pp0">P0</span></td></tr>
+          <tr><td>예상 종가</td><td>회귀 모델 기반 다음 봉 예상 변동폭 및 종가 출력</td><td><span class="pp0">P0</span></td></tr>
+          <tr><td>분석 근거</td><td>RSI, VWAP, MACD 기반 자동 텍스트</td><td><span class="pp1">P1</span></td></tr>
+          <tr><td>캔들차트</td><td>MA20, VWAP 오버레이 + 예상 종가 수평선</td><td><span class="pp1">P1</span></td></tr>
+          <tr><td>신호 태그</td><td>고신뢰 매수 등 3개 이내 요약 태그</td><td><span class="pp2">P2</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 06 데이터 설계 -->
+  <div id="sec-data" class="sec reveal">
+    <div class="sec-eye">06 · Data Design</div>
+    <div class="sec-title">데이터 설계</div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Train Pipeline</div>
+    <div class="tbl-wrap" style="margin-bottom:28px;">
+      <table>
+        <thead><tr><th>단계</th><th>내용</th><th>상세</th></tr></thead>
+        <tbody>
+          <tr><td>1. 데이터 수집</td><td>5분봉 수집</td><td>yfinance API, 종목별 <strong>60일치</strong> 장중 데이터</td></tr>
+          <tr><td>2. 피처 생성</td><td>90+ 피처 자동 생성</td><td>캔들 / MA / VWAP / RSI / MACD / ATR / 지지저항 / 거시지표 / 섹터더미 / 상호작용 피처</td></tr>
+          <tr><td>3. 레이블 생성</td><td>다음 봉 수익률 기준 3분류</td><td>BULLISH / NEUTRAL / BEARISH (임계값 ±0.15%)</td></tr>
+          <tr><td>4. 모델 학습</td><td>XGBoost + 1D CNN 앙상블</td><td>Optuna 100회 튜닝 + TimeSeriesSplit 5-fold + 앙상블 가중치 최적화</td></tr>
+          <tr><td>5. 회귀 모델</td><td>변동폭 예측</td><td>XGBRegressor로 다음 봉 예상 변동폭 및 종가 추가 출력</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Feature Categories (총 90+개 · 47개 종목)</div>
+    <div class="data-grid" style="margin-bottom:28px;">
+      <div class="data-card"><div class="d-cat">캔들 패턴</div><ul><li>몸통 비율</li><li>윗꼬리 / 아랫꼬리 비율</li><li>Engulf 패턴</li><li>갭 · 연속 방향</li></ul></div>
+      <div class="data-card"><div class="d-cat">이동평균</div><ul><li>MA9/20/50/200 대비 거리</li><li>MA 골든크로스 여부</li><li>MA 기울기</li></ul></div>
+      <div class="data-card"><div class="d-cat">모멘텀</div><ul><li>RSI14</li><li>MACD Histogram</li><li>Stochastic K/D</li><li>ROC 1/3/6/12봉</li></ul></div>
+      <div class="data-card"><div class="d-cat">변동성</div><ul><li>ATR Ratio</li><li>Bollinger Band 폭 · 위치</li><li>BB 돌파 여부</li></ul></div>
+      <div class="data-card"><div class="d-cat">거래량</div><ul><li>1H/4H 평균 대비 비율</li><li>거래량 급등 여부</li><li>OBV Slope</li><li>매수/매도 거래량</li></ul></div>
+      <div class="data-card"><div class="d-cat">세션 · 지지저항 · 래그</div><ul><li>장 시작/마감 시간대</li><li>1H/4H 고가·저가 대비 위치</li><li>직전 6봉 수익률 · RSI 래그</li></ul></div>
+      <div class="data-card"><div class="d-cat">거시지표</div><ul><li>VIX 변화율 · 신호</li><li>금 · 유가 변화율 · 신호</li><li>달러(DXY) 변화율 · 신호</li></ul></div>
+      <div class="data-card"><div class="d-cat">섹터 더미 · 상호작용</div><ul><li>9개 섹터 원핫 인코딩</li><li>유가×에너지/반도체</li><li>달러×기술주/반도체</li><li>VIX×고변동성/금융 등 12개</li></ul></div>
+    </div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Label Design</div>
+    <div class="label-row" style="margin-bottom:28px;">
+      <div class="lpill lp-bull">▲ BULLISH (+1)<span style="font-weight:400;opacity:.65;font-size:11px;margin-left:8px;">+0.15% 초과</span></div>
+      <div class="lpill lp-bear">▼ BEARISH (–1)<span style="font-weight:400;opacity:.65;font-size:11px;margin-left:8px;">–0.15% 미만</span></div>
+      <div class="lpill lp-neut">— NEUTRAL (0)<span style="font-weight:400;opacity:.65;font-size:11px;margin-left:8px;">그 외 (전체의 약 67%)</span></div>
+    </div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Model Decisions</div>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>결정</th><th>이유</th></tr></thead>
+        <tbody>
+          <tr><td>TimeSeriesSplit 교차검증</td><td>일반 KFold 사용 시 <strong>미래 데이터 누출 방지</strong></td></tr>
+          <tr><td>Confidence Threshold 도입</td><td>낮은 확신 신호 필터링 → <strong>신뢰성</strong> 높은 신호만 노출</td></tr>
+          <tr><td>다종목 통합 학습 (47개 종목)</td><td>종목별 데이터 부족 문제 해결, 패턴 일반화</td></tr>
+          <tr><td>XGBoost + 1D CNN 앙상블</td><td>피처 기반 규칙(XGBoost) + 시계열 패턴(CNN) 상호 보완</td></tr>
+          <tr><td>Optuna 목적함수 균형 패널티</td><td>매수/매도 신호 균형 강제 → 편향 방지</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 07 결과 및 성과 -->
+  <div id="sec-result" class="sec reveal">
+    <div class="sec-eye">07 · Results</div>
+    <div class="sec-title">결과 및 성과</div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Model Performance (Hold-out 백테스트 · 신뢰도 60%+ 기준)</div>
+
+    <!-- KPI 카드 -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:24px;">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:8px;">ACCURACY</div>
+        <div style="font-size:28px;font-weight:900;color:var(--yellow);letter-spacing:-1px;">80.4%</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">Hold-out 정확도</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:8px;">TOTAL RETURN</div>
+        <div style="font-size:28px;font-weight:900;color:var(--green);letter-spacing:-1px;">+196.83%</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">합산 수익률</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:8px;">REGRESSION</div>
+        <div style="font-size:28px;font-weight:900;color:var(--blue);letter-spacing:-1px;">83.9%</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">60%+ 방향 일치율</div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;text-align:center;">
+        <div style="font-size:11px;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:8px;">TEST SAMPLES</div>
+        <div style="font-size:28px;font-weight:900;color:var(--text);letter-spacing:-1px;">40,213</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">테스트 샘플 수</div>
+      </div>
+    </div>
+
+    <!-- 실전 수익률 추정 -->
+    <div class="s-sub" style="margin-bottom:12px;">실전 수익률 추정 (자본 1억 · 하루 2~3신호 선택 기준)</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px;">
+      <div style="background:var(--card);border:1px solid rgba(52,211,153,0.25);border-radius:var(--radius);padding:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--green);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:10px;">OPTIMISTIC</div>
+        <div style="font-size:22px;font-weight:900;color:var(--green);letter-spacing:-0.8px;margin-bottom:4px;">2,000~3,000만원</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">12일 수익 추정</div>
+        <div style="background:rgba(52,211,153,0.08);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--green);">연환산 ~300%</div>
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid rgba(79,142,247,0.25);border-radius:var(--radius);padding:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--blue);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:10px;">REALISTIC</div>
+        <div style="font-size:22px;font-weight:900;color:var(--blue);letter-spacing:-0.8px;margin-bottom:4px;">1,000~1,500만원</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">12일 수익 추정</div>
+        <div style="background:rgba(79,142,247,0.08);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--blue);">연환산 ~150%</div>
+        </div>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:22px;">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);font-family:'IBM Plex Mono',monospace;letter-spacing:0.4px;margin-bottom:10px;">CONSERVATIVE</div>
+        <div style="font-size:22px;font-weight:900;color:var(--text-sub);letter-spacing:-0.8px;margin-bottom:4px;">500~800만원</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">12일 수익 추정</div>
+        <div style="background:var(--bg2);border-radius:8px;padding:10px 12px;">
+          <div style="font-size:13px;font-weight:700;color:var(--text-sub);">연환산 ~80%</div>
+        </div>
+      </div>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);padding:6px 4px 28px;">슬리피지·과적합 감안 50% 할인 적용 — <strong style="color:var(--text-sub);">증권사 API 자동매매 시 백테스트 수치에 가까워질 수 있음</strong></p>
+
+    <div class="tbl-wrap result-tbl" style="margin-bottom:8px;">
+      <table>
+        <thead><tr><th>Confidence 임계값</th><th>매수 신호 수</th><th>방향 정확도</th><th>평균 수익률</th></tr></thead>
+        <tbody>
+          <tr><td>40% 이상</td><td>다수</td><td><div class="acc-row"><div class="bar-t"><div class="bar-f" style="width:60%"></div></div><span class="bar-l">~60%</span></div></td><td style="color:var(--green);font-weight:700;">+0.47%</td></tr>
+          <tr><td>50% 이상</td><td>중간</td><td><div class="acc-row"><div class="bar-t"><div class="bar-f" style="width:75%"></div></div><span class="bar-l">~75%</span></div></td><td style="color:var(--green);font-weight:700;">+0.62%</td></tr>
+          <tr><td>60% 이상</td><td>소수 (고신뢰)</td><td><div class="acc-row"><div class="bar-t"><div class="bar-f" style="width:100%"></div></div><span class="bar-l" style="color:var(--yellow);">~100%</span></div></td><td style="color:var(--yellow);font-weight:700;">+0.67%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);padding:6px 4px 28px;">임계값을 높일수록 신호 수는 감소하나 정확도 향상 — <strong style="color:var(--yellow);">H2 가설 검증 완료</strong></p>
+
+    <!-- 모델 성능 리포트 이미지 -->
+    <div class="s-sub" style="margin-bottom:12px;">Model Report Visualization</div>
+    <div class="video-box" style="margin-bottom:28px;">
+      <div class="video-topbar">
+        <div class="wd wd-r"></div><div class="wd wd-y"></div><div class="wd wd-g"></div>
+        <span class="win-title">chart_ml_v4_model_report.png</span>
+        <div class="vp-badge"><div class="vp-dot"></div>v4 Model Report</div>
+      </div>
+      <img src="196_chart_ml_v4_model_report.png" alt="XGBoost 5분봉 모델 성능 리포트 v4"
+           style="width:100%;display:block;background:#0a0a0d;">
+    </div>
+
+    <div class="s-sub" style="margin-bottom:12px;">Product Achievements</div>
+    <div class="achieve-list">
+      <div class="a-item"><span class="a-icon">📈</span><span>신뢰도 60%+ 신호 기준 Hold-out 합산 수익률 <strong>+196.83%</strong> 달성 (매수 +98.72% / 매도 +98.11%)</span></div>
+      <div class="a-item"><span class="a-icon">⚡</span><span>티커 입력부터 결과 출력까지 <strong>100% 5초 이내</strong> 달성</span></div>
+      <div class="a-item"><span class="a-icon">🌐</span><span>거시지표(VIX·금·유가·달러) + 섹터 더미 + 상호작용 피처 결합으로 <strong>시장 국면 반영</strong></span></div>
+      <div class="a-item"><span class="a-icon">📋</span><span>분석 근거 자동 생성으로 <strong>지표 해석 없이도</strong> 판단 근거 확인 가능</span></div>
+      <div class="a-item"><span class="a-icon">🔄</span><span>단일 범용 모델로 <strong>47개 종목 동시 지원</strong> (9개 섹터 전체 커버)</span></div>
+    </div>
+  </div>
+
+  <hr class="div-line">
+
+  <!-- 08 개선점 -->
+  <div id="sec-improve" class="sec reveal">
+    <div class="sec-eye">08 · Improvements</div>
+    <div class="sec-title">개선점</div>
+    <div class="s-sub" style="margin-bottom:14px;color:var(--yellow);">단기 개선 (Next Sprint)</div>
+    <div class="improve-grid" style="margin-bottom:32px;">
+      <div class="imp-card"><h3>데이터 기간 확대</h3><p>Yahoo Finance 60일 한계 → Polygon.io 연동으로 2년+ 데이터 확보. 의미있는 MDD·샤프비율 계산 가능</p></div>
+      <div class="imp-card"><h3>알림 기능</h3><p>신뢰도 60%+ 신호 발생 시 브라우저 푸시 · 슬랙 · 카카오 알림 자동 전송</p></div>
+      <div class="imp-card"><h3>멀티 티커 대시보드</h3><p>단일 조회 페이지에서 47개 종목 신호를 한눈에 비교하는 스크리너 형태로 개편</p></div>
+      <div class="imp-card"><h3>딥러닝 앙상블 고도화</h3><p>현재 XGBoost + CNN 구조에 LSTM(장중 시간 흐름 기억)과 Transformer(봉별 중요도 가중치)를 추가해 4중 앙상블로 예측 정확도 향상 도전</p></div>
+    </div>
+    <div class="s-sub" style="margin-bottom:14px;color:var(--text-muted);">중장기 개선</div>
+    <div class="improve-grid">
+      <div class="imp-card"><h3>일봉 모델 추가</h3><p>5분봉(단타) 외 일봉 기반 모델 추가로 "내일 오를 종목" 서비스 확장. 분기별 리밸런싱 ETF 전략 연계</p></div>
+      <div class="imp-card"><h3>실사용 피드백 수집</h3><p>신호 발생 후 실제 결과 추적 → 모델 재학습 루프 구성. 적중률 실시간 업데이트</p></div>
+      <div class="imp-card"><h3>증권사 API 자동매매</h3><p>Alpaca API 연동으로 신뢰도 60%+ 신호 자동 진입/청산. 슬리피지 최소화로 백테스트 수익률 재현</p></div>
+      <div class="imp-card"><h3>LSTM 추가</h3><p>장중 추세 흐름을 기억하는 LSTM 레이어 추가로 XGBoost + CNN + LSTM 3중 앙상블 구성</p></div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="ft-l">포트폴리오</div>
+    <div class="ft-r">2026</div>
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+  const revealEls = document.querySelectorAll('.reveal');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, { threshold: 0.08 });
+  revealEls.forEach(el => obs.observe(el));
+
+  /* active nav highlight */
+  const sections = document.querySelectorAll('[id^="sec-"]');
+  const navLinks = document.querySelectorAll('.nav-links a');
+  const navObs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        navLinks.forEach(a => a.classList.remove('active'));
+        const active = document.querySelector(`.nav-links a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => navObs.observe(s));
+</script>
+</body>
+</html>
